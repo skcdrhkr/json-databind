@@ -15,62 +15,63 @@ public class EntityMapper {
     private static final String END_OBJECT = "}";
 
     public static <T> String writeValueAsString(T object) throws IllegalAccessException {
-        MetaModel model = MetaModel.of(object.getClass());
         if (object.getClass().isArray()) {
-            if (Array.getLength(object) == 0) {
-                return START_LIST + END_LIST;
-            }
-            int size = Array.getLength(object);
-            StringBuilder outputJson = new StringBuilder(START_LIST);
-            for (int ind = 0; ind < size; ind++) {
-                outputJson.append(writeValueAsString(Array.get(object, ind)));
-            }
-            outputJson.deleteCharAt(outputJson.length() - 1);
-            outputJson.append(END_LIST);
-            return outputJson.toString();
+            return serializeEntityArray(object);
         } else if (List.class.isAssignableFrom(object.getClass())) {
-            if (((List<?>) object).isEmpty()) {
-                return START_LIST + END_LIST;
-            }
-            List<?> list = ((List<?>) object);
-            int size = list.size();
-            StringBuilder outputJson = new StringBuilder(START_LIST);
-            for (int ind = 0; ind < size; ind++) {
-                outputJson.append(writeValueAsString(list.get(ind)));
-            }
-            outputJson.deleteCharAt(outputJson.length() - 1);
-            outputJson.append(END_LIST);
-            return outputJson.toString();
+            return serializeEntityArray(((List<?>) object).toArray());
         } else {
-            List<Entity> jsonEntities = model.getJsonEntities();
-            StringBuilderWrapper outputJson = new StringBuilderWrapper(START_OBJECT);
-            for (Entity entity : jsonEntities) {
-                Class<?> fieldType = entity.getType();
-                String fieldName = entity.getName();
-                Field field = entity.getField();
-                field.setAccessible(true);
-                if (field.get(object) == null) {
-                    continue;
-                } else if (fieldType == String.class || fieldType == Character.class) {
-                    outputJson.appendKey(fieldName).appendSeparater().appendWrapped(field.get(object));
-                } else if (fieldType == char.class) {
-                    outputJson.appendKey(fieldName).appendSeparater().appendWrapped(field.getChar(object));
-                } else if (isBoxedNumber(fieldType)) {
-                    outputJson.appendKey(fieldName).appendSeparater().append(field.get(object));
-                } else if (isIntegerPrimitive(fieldType)) {
-                    outputJson.appendKey(fieldName).appendSeparater().append(field.getLong(object));
-                } else if (isFloatingPointPrimitive(fieldType)) {
-                    outputJson.appendKey(fieldName).appendSeparater().append(field.getDouble(object));
-                } else {
-                    outputJson.appendKey(fieldName).appendSeparater().append(writeValueAsString(field.get(object)));
-                }
+            return serializeEntity(object);
+        }
+    }
+
+    private static <T> String serializeEntityArray(T object) throws IllegalAccessException {
+        int size = Array.getLength(object);
+        StringBuilder outputJson = new StringBuilder(START_LIST);
+        for (int ind = 0; ind < size; ind++) {
+            outputJson.append(serializeEntity(Array.get(object, ind)));
+            if (ind != size - 1) {
                 outputJson.append(",");
             }
-            outputJson.deleteCharAt(outputJson.length() - 1);
-            outputJson.append(END_OBJECT);
-            outputJson.append(",");
-            return outputJson.toString();
         }
+        outputJson.append(END_LIST);
+        return outputJson.toString();
+    }
+
+    private static <T> String serializeEntity(T object) throws IllegalAccessException {
+        MetaModel model = MetaModel.of(object.getClass());
+        List<Entity> jsonEntities = model.getJsonEntities();
+        StringBuilderWrapper outputJson = new StringBuilderWrapper(START_OBJECT);
+
+        for (int index = 0; index < jsonEntities.size(); index++) {
+            Entity entity = jsonEntities.get(index);
+            Class<?> fieldType = entity.getType();
+            String fieldName = entity.getName();
+            Field field = entity.getField();
+            field.setAccessible(true);
+            if (field.get(object) == null) {
+                if (index == jsonEntities.size() - 1) {
+                    outputJson.deleteCharAt(outputJson.length() - 1);
+                }
+                continue;
+            } else if (fieldType == String.class || fieldType == Character.class) {
+                outputJson.appendKey(fieldName).appendSeparater().appendWrapped(field.get(object));
+            } else if (fieldType == char.class) {
+                outputJson.appendKey(fieldName).appendSeparater().appendWrapped(field.getChar(object));
+            } else if (isBoxedNumber(fieldType)) {
+                outputJson.appendKey(fieldName).appendSeparater().append(field.get(object));
+            } else if (isIntegerPrimitive(fieldType)) {
+                outputJson.appendKey(fieldName).appendSeparater().append(field.getLong(object));
+            } else if (isFloatingPointPrimitive(fieldType)) {
+                outputJson.appendKey(fieldName).appendSeparater().append(field.getDouble(object));
+            } else {
+                outputJson.appendKey(fieldName).appendSeparater().append(writeValueAsString(field.get(object)));
+            }
+            if (index != jsonEntities.size() - 1) {
+                outputJson.append(",");
+            }
+        }
+        outputJson.append(END_OBJECT);
+        return outputJson.toString();
     }
 
     private static boolean isFloatingPointPrimitive(Class<?> fieldType) {

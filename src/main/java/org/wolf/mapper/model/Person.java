@@ -8,23 +8,40 @@ public class Person {
 
     @JsonEntity
     private int age;
+
+    @JsonEntity
+    private List<Person> children;
     @JsonEntity
     private String name;
-    @JsonEntity
-    private List<Person> child;
 
-    public Person(int age, String name, List<Person> child) {
+    @JsonEntity
+    private Person[] relatives;
+
+    public Person(int age, String name, List<Person> children) {
         this.age = age;
         this.name = name;
-        this.child = child;
+        this.children = children;
     }
 
-    public List<Person> getChild() {
-        return child;
+    public Person(int age, String name) {
+        this.age = age;
+        this.name = name;
     }
 
-    public void setChild(List<Person> child) {
-        this.child = child;
+    public Person[] getRelatives() {
+        return relatives;
+    }
+
+    public void setRelatives(Person[] relatives) {
+        this.relatives = relatives;
+    }
+
+    public List<Person> getChildren() {
+        return children;
+    }
+
+    public void setChildren(List<Person> children) {
+        this.children = children;
     }
 
     public int getAge() {
